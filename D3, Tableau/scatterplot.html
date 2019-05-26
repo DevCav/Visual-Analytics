@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+
+<!-- Example based on http://bl.ocks.org/mbostock/3887118 -->
+<!-- Tooltip example from http://www.d3noob.org/2013/01/adding-tooltips-to-d3js-graph.html -->
+<!-- Coding style based on http://gist.github.com/mbostock/5977197 -->
+
+<style>
+body {
+  font: 11px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.dot {
+  stroke: #000;
+
+}
+
+.point {
+        fill: steelblue;
+        stroke: #000;
+    }
+
+.tooltip {
+  position: absolute;
+  width: 200px;
+  height: 28px;
+  pointer-events: none;
+}
+</style>
+<body>
+<script src="../lib/d3.v5.min.js"></script>
+
+<script>
+
+var margin = {top: 75, right: 20, bottom: 30, left: 100},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+/* 
+ * value accessor - returns the value to encode for a given data object.
+ * scale - maps value to a visual display encoding, such as a pixel position.
+ * map function - maps from data value to display value
+ * axis - sets up axis
+ */ 
+
+// setup x 
+var xValue = function(d) { return d.Rating;}, // data -> value
+    xScale = d3.scaleLinear().range([0, width]), // value -> display
+    xMap = function(d) { return xScale(xValue(d));}, // data -> display
+    xAxis = d3.axisBottom(xScale);
+
+// setup y
+var yValue = function(d) { return d.WinsNoms;}, // data -> value
+    yScale = d3.scaleLinear().range([height, 0]), // value -> display
+    yMap = function(d) { return yScale(yValue(d));}, // data -> display
+    yAxis = d3.axisLeft(yScale);
+	
+//setup y 2
+var yValue2 = function(d) { return d.Budget;}, // data -> value
+    yScale2 = d3.scaleLinear().range([height, 0]), // value -> display
+    yMap2 = function(d) { return yScale2(yValue2(d));}, // data -> display
+    yAxis2 = d3.axisLeft(yScale2);
+	
+//setup y 3
+var yValue3 = function(d) { return d.Votes;}, // data -> value
+    yScale3 = d3.scaleLinear().range([height, 0]), // value -> display
+    yMap3 = function(d) { return yScale3(yValue3(d));}, // data -> display
+    yAxis3 = d3.axisLeft(yScale3);
+
+// sey up r scale
+var rValue = function(d) { return d.WinsNoms;}, // data -> value
+	rScale = d3.scaleLinear().range([2, 2000]), // value -> display
+	rMap = function(d) { return rScale(rValue(d));} // data -> display
+
+//setup y 4
+var yValue4 = function(d) { return d.WinsNoms;}, // data -> value
+    yScale4 = d3.scaleSqrt().range([height, 0]), // value -> display
+    yMap4 = function(d) { return yScale4(yValue4(d));}, // data -> display
+    yAxis4 = d3.axisLeft(yScale4);
+	
+//setup y 5
+var yValue5 = function(d) { return d.WinsNoms;}, // data -> value
+    yScale5 = d3.scaleLog().range([height, 0]), // value -> display
+    yMap5 = function(d) { return yScale5(yValue5(d));}, // data -> display
+    yAxis5 = d3.axisLeft(yScale5);
+
+
+// setup fill color
+var cValue = function(d) { return d.IsGoodRating;},
+    color = d3.scaleOrdinal(d3.schemeCategory10)
+			.domain(["0", "1"])
+			.range(["red","blue"])
+
+	
+
+// create symbols
+var symbol = {
+	"0" : d3.symbol().type(d3.symbolCircle),
+	"1" : d3.symbol().type(d3.symbolCross)
+     }
+
+
+
+// add the graph canvas to the body of the webpage
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+	
+// add the graph canvas to the body of the webpage
+var svg2 = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+	
+// add the graph canvas to the body of the webpage
+var svg3 = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// add the graph canvas to the body of the webpage
+var svg4 = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// add the graph canvas to the body of the webpage
+var svg5 = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");	
+
+	
+// add the tooltip area to the webpage
+var tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+var sizeScale = d3.scaleLinear().range([5, 250]);
+
+var symbolTypesx = {
+  "cross": d3.symbol().type(d3.symbolCross).size(function(d) {
+	return sizeScale(d.WinsNoms);
+  }),
+  "circle": d3.symbol().type(d3.symbolCircle).size(function(d) {
+	return sizeScale(d.WinsNoms);
+  })}
+	
+	
+// load data
+d3.csv("movies.csv")
+    .then(function(data) {
+    // Coerce the strings to numbers.
+    data.forEach(function(d) {
+        d.WinsNoms = +d.WinsNoms;
+        d.Rating = +d.Rating;
+		d.IsGoodRating = +d.IsGoodRating;
+		d.Budget = +d.Budget;
+		d.Votes = +d.Votes;
+    });
+
+  // dont want dots overlapping axis, so add in buffer to data domain
+  xScale.domain([d3.min(data, xValue)-1, d3.max(data, xValue)+1]);
+  yScale.domain([d3.min(data, yValue)-1, d3.max(data, yValue)+1]);
+  yScale2.domain([d3.min(data, yValue2)-1, d3.max(data, yValue2)+1]);
+  yScale3.domain([d3.min(data, yValue3)-1, d3.max(data, yValue3)+1]);
+  sizeScale.domain([d3.min(data, rValue)-1, d3.max(data, rValue)+1]);
+  yScale4.domain(d3.extent(data, function(d) {return d.WinsNoms;}));
+  yScale5.domain([1, d3.max(data, yValue5)+1]);
+  
+  // x-axis
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("x", width)
+      .attr("y", -6)
+      .style("text-anchor", "middle")
+      .text("Rating")
+	  .attr("stroke", "black")
+	  .attr("font-weight", 5);
+	  
+	// x-axis 2
+  svg2.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("x", width)
+      .attr("y", -6)
+      .style("text-anchor", "middle")
+      .text("Rating")
+	  .attr("stroke", "black");
+
+	// x-axis 3
+  svg3.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("x", width)
+      .attr("y", -6)
+      .style("text-anchor", "middle")
+      .text("Rating")
+	  .attr("stroke", "black");
+	 
+	// x-axis 4
+    svg4.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("x", width)
+      .attr("y", -6)
+      .style("text-anchor", "middle")
+      .text("Rating")
+	  .attr("stroke", "black");
+	
+	 // x-axis 5
+    svg5.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("x", width)
+      .attr("y", -6)
+      .style("text-anchor", "middle")
+      .text("Rating")
+	  .attr("stroke", "black");
+
+	 
+  // y-axis
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "middle")
+      .text("Wins + Noms")
+	  .attr("stroke", "black");
+	  
+  // y-axis 2
+  svg2.append("g")
+      .attr("class", "y axis")
+      .call(yAxis2)
+    .append("text")
+      .attr("class", "label")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "middle")
+      .text("Budget")
+	  .attr("stroke", "black");
+
+  // y-axis 3
+  svg3.append("g")
+      .attr("class", "y axis")
+      .call(yAxis3)
+    .append("text")
+      .attr("class", "label")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "middle")
+      .text("Votes")
+	  .attr("stroke", "black");
+	  
+	// y-axis 4
+    svg4.append("g")
+      .attr("class", "y axis")
+      .call(yAxis4)
+    .append("text")
+      .attr("class", "label")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "middle")
+      .text("Wins + Noms")
+	  .attr("stroke", "black");
+	  
+	 // y-axis 5
+    svg5.append("g")
+      .attr("class", "y axis")
+      .call(yAxis5)
+    .append("text")
+      .attr("class", "label")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "middle")
+      .text("Wins + Noms")
+	  .attr("stroke", "black");
+
+
+    // Add the points to graph 1
+    svg.selectAll(".point")
+        .data(data)
+        .enter().append("path")
+        .attr("d", function (d) {
+				return self.symbol[d.IsGoodRating]();
+			})
+        .attr("transform", function(d) { return "translate(" + xScale(d.Rating) + "," + yScale(d.WinsNoms) + ")"; })
+		.style("stroke", function(d){ return color(d.IsGoodRating); })
+		.on("mouseover", function(d) {
+          tooltip.transition()
+               .duration(200)
+               .style("opacity", .9);
+          tooltip.html(d.IsGoodRating + "<br/> (" + xValue(d) 
+	        + ", " + yValue(d) + ")")
+               .style("left", (d3.event.pageX + 5) + "px")
+               .style("top", (d3.event.pageY - 28) + "px");
+      })
+      .on("mouseout", function(d) {
+          tooltip.transition()
+               .duration(500)
+               .style("opacity", 0);
+      });
+	  
+	  
+	// Add the points to graph 2
+	svg2.selectAll(".point")
+		.data(data)
+		.enter().append("path")
+		.attr("d", function (d) {
+				return self.symbol[d.IsGoodRating]();
+			})
+		.attr("transform", function(d) { return "translate(" + xScale(d.Rating) + "," + yScale2(d.Budget) + ")"; })
+		.style("stroke", function(d){ return color(d.IsGoodRating); })
+		.on("mouseover", function(d) {
+		  tooltip.transition()
+			   .duration(200)
+			   .style("opacity", .9);
+		  tooltip.html(d.IsGoodRating + "<br/> (" + xValue(d) 
+			+ ", " + yValue2(d) + ")")
+			   .style("left", (d3.event.pageX + 5) + "px")
+			   .style("top", (d3.event.pageY - 28) + "px");
+	  })
+	  .on("mouseout", function(d) {
+		  tooltip.transition()
+			   .duration(500)
+			   .style("opacity", 0);
+	  });
+	  
+	  
+	 // Add the points to graph 3
+	svg3.selectAll(".point")
+		.data(data)
+		.enter().append("path")
+		.attr("d", function(d, i) {
+			if (d.IsGoodRating === 0) { // circle if bar === 0
+			  return symbolTypesx.circle(d);
+			} else {
+			  return symbolTypesx.cross(d);
+			}
+		  })
+		.attr("transform", function(d) { return "translate(" + xScale(d.Rating) + "," + yScale3(d.Votes) + ")"; })
+		.style("stroke", function(d){ return color(d.IsGoodRating); })
+		.on("mouseover", function(d) {
+		  tooltip.transition()
+			   .duration(200)
+			   .style("opacity", .9);
+		  tooltip.html(d.IsGoodRating + "<br/> (" + xValue(d) 
+			+ ", " + yValue3(d) + ")")
+			   .style("left", (d3.event.pageX + 5) + "px")
+			   .style("top", (d3.event.pageY - 28) + "px");
+	  })
+	  .on("mouseout", function(d) {
+		  tooltip.transition()
+			   .duration(500)
+			   .style("opacity", 0);
+	  });
+	  
+	 
+	 // Add the points to graph 4
+    svg4.selectAll(".point")
+        .data(data)
+        .enter().append("path")
+        .attr("d", function (d) {
+				return self.symbol[d.IsGoodRating]();
+			})
+        .attr("transform", function(d) { return "translate(" + xScale(d.Rating) + "," + yScale4(d.WinsNoms) + ")"; })
+		.style("stroke", function(d){ return color(d.IsGoodRating); })
+		.on("mouseover", function(d) {
+          tooltip.transition()
+               .duration(200)
+               .style("opacity", .9);
+          tooltip.html(d.IsGoodRating + "<br/> (" + xValue(d) 
+	        + ", " + yValue4(d) + ")")
+               .style("left", (d3.event.pageX + 5) + "px")
+               .style("top", (d3.event.pageY - 28) + "px");
+      })
+      .on("mouseout", function(d) {
+          tooltip.transition()
+               .duration(500)
+               .style("opacity", 0);
+      });
+
+	
+	// Add the points to graph 5
+    svg5.selectAll(".point")
+        .data(data)
+        .enter().append("path")
+        .attr("d", function (d) {
+				return self.symbol[d.IsGoodRating]();
+			})
+        .attr("transform", function(d) { return "translate(" + xScale(d.Rating) + "," + yScale(d.WinsNoms) + ")"; })
+		.style("stroke", function(d){ return color(d.IsGoodRating); })
+		.on("mouseover", function(d) {
+          tooltip.transition()
+               .duration(200)
+               .style("opacity", .9);
+          tooltip.html(d.IsGoodRating + "<br/> (" + xValue(d) 
+	        + ", " + yValue(d) + ")")
+               .style("left", (d3.event.pageX + 5) + "px")
+               .style("top", (d3.event.pageY - 28) + "px");
+      })
+      .on("mouseout", function(d) {
+          tooltip.transition()
+               .duration(500)
+               .style("opacity", 0);
+      });
+	  
+	  
+  // draw legend
+  var legend = svg.selectAll(".legend")
+      .data(color.domain())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  // draw legend colored rectangles
+  legend.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", color);
+
+  // draw legend text
+  legend.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d){ if (d == 1) {
+        return "Good Rating";
+      }else{
+        return "Bad Rating";
+      }
+  })
+
+
+
+  // draw legend 2 
+  var legend2 = svg2.selectAll(".legend")
+      .data(color.domain())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  // draw legend colored rectangles
+  legend2.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", color);
+
+  // draw legend text
+  legend2.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d){ if (d == 1) {
+        return "Good Rating";
+      }else{
+        return "Bad Rating";
+      }
+  })
+	  
+	  // draw legend 3 
+  var legend3 = svg3.selectAll(".legend")
+      .data(color.domain())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  // draw legend colored rectangles
+  legend3.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", color);
+
+  // draw legend text
+  legend3.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d){ if (d == 1) {
+        return "Good Rating";
+      }else{
+        return "Bad Rating";
+      }
+  })
+
+	  
+  // draw legend 4 
+  var legend4 = svg4.selectAll(".legend")
+      .data(color.domain())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  // draw legend colored rectangles
+  legend4.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", color);
+
+  // draw legend text
+  legend4.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d){ if (d == 1) {
+        return "Good Rating";
+      }else{
+        return "Bad Rating";
+      }
+  })
+	  
+	
+	// draw legend 5
+  var legend5 = svg5.selectAll(".legend")
+      .data(color.domain())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  // draw legend colored rectangles
+  legend5.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", color);
+
+  // draw legend text
+  legend5.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d){ if (d == 1) {
+        return "Good Rating";
+      }else{
+        return "Bad Rating";
+      }
+  })
+	 
+
+	svg.append("text")
+        .attr("x", (width / 2))             
+        .attr("y", 0 - (margin.top / 2))
+        .attr("text-anchor", "middle")  
+        .style("font-size", "16px") 
+        .style("text-decoration", "underline")  
+        .text("Wins+Nominations vs. Rating");
+		
+	svg2.append("text")
+		.attr("x", (width / 2))             
+		.attr("y", 0 - (margin.top / 2))
+		.attr("text-anchor", "middle")  
+		.style("font-size", "16px") 
+		.style("text-decoration", "underline")  
+		.text("Budget vs. Rating");
+	
+	svg3.append("text")
+		.attr("x", (width / 2))             
+		.attr("y", 0 - (margin.top / 2))
+		.attr("text-anchor", "middle")  
+		.style("font-size", "16px") 
+		.style("text-decoration", "underline")  
+		.text("Votes vs. Rating sized by Wins+Nominations");
+		
+	svg4.append("text")
+		.attr("x", (width / 2))             
+		.attr("y", 0 - (margin.top / 2))
+		.attr("text-anchor", "middle")  
+		.style("font-size", "16px") 
+		.style("text-decoration", "underline")  
+		.text("Wins+Nominations (square-root-scaled) vs. Rating");
+		
+	svg5.append("text")
+		.attr("x", (width / 2))             
+		.attr("y", 0 - (margin.top / 2))
+		.attr("text-anchor", "middle")  
+		.style("font-size", "16px") 
+		.style("text-decoration", "underline")  
+		.text("Wins+Nominations (log-scaled) vs. Rating");
+	  
+	  
+});
+
+</script>
+</body>
+</html>
